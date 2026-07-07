@@ -8,9 +8,11 @@ export default function Layout() {
   const [selectedMeetingId, setSelectedMeetingId] = useState<string | null>(null)
   const [sidebarRefresh, setSidebarRefresh] = useState(0)
 
-  const handleSelectMeeting = (id: string | null) => {
+  const handleSelectMeeting = (id: string | null, targetPath?: string) => {
     setSelectedMeetingId(id)
-    if (pathname !== '/tasks') {
+    if (targetPath) {
+      navigate(targetPath)
+    } else if (pathname !== '/tasks') {
       navigate('/tasks')
     }
   }

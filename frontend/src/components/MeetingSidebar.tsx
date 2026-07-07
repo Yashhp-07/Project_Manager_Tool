@@ -5,7 +5,7 @@ import { listMeetings } from '../api/meetings'
 
 interface MeetingSidebarProps {
   selectedMeetingId: string | null
-  onSelectMeeting: (id: string | null) => void
+  onSelectMeeting: (id: string | null, targetPath?: string) => void
   refreshKey?: number
 }
 
@@ -49,7 +49,12 @@ export default function MeetingSidebar({
 
   return (
     <aside className="hidden md:flex flex-col h-screen p-md overflow-y-auto w-sidebar-width fixed left-0 top-0 border-r border-outline-variant bg-surface z-10 shrink-0">
-      <div className="mb-xl">
+      <div 
+        className="mb-xl cursor-pointer hover:opacity-80 transition-opacity"
+        onClick={() => onSelectMeeting(null, '/')}
+        role="button"
+        tabIndex={0}
+      >
         <h1 className="font-display text-display text-primary">Task Xtractor</h1>
         <p className="font-label-md text-label-md text-on-surface-variant">Task Intelligence</p>
       </div>

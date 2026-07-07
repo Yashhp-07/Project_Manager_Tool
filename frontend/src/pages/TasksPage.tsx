@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
 import { useOutletContext } from 'react-router-dom'
 import type { Task, TaskFilters as TaskFiltersType, TaskUpdate, Meeting } from '../types'
+import { useViewRole } from '../context/ViewRoleContext'
 import { ApiClientError } from '../api/client'
 import { listTasks, updateTask, exportTasksCsv } from '../api/tasks'
 import { getMeeting } from '../api/meetings'
@@ -15,6 +16,7 @@ interface LayoutContext {
 
 export default function TasksPage() {
   const { selectedMeetingId } = useOutletContext<LayoutContext>()
+  const { role, setRole } = useViewRole()
   const [filters, setFilters] = useState<TaskFiltersType>({})
   const [tasks, setTasks] = useState<Task[] | null>(null)
   const [loading, setLoading] = useState(true)
@@ -22,6 +24,7 @@ export default function TasksPage() {
   const [exporting, setExporting] = useState(false)
   
   const [meeting, setMeeting] = useState<Meeting | null>(null)
+  const [transcriptOpen, setTranscriptOpen] = useState(false)
 
   const effectiveFilters: TaskFiltersType = {
     ...filters,
@@ -35,6 +38,7 @@ export default function TasksPage() {
       if (mId) {
         const m = await getMeeting(mId)
         setMeeting(m)
+        setTranscriptOpen(false)
       } else {
         setMeeting(null)
       }
@@ -103,17 +107,35 @@ export default function TasksPage() {
       year: 'numeric',
     })
 
+  const hasActiveFilters = !!(filters.owner || filters.status || filters.priority)
+
   return (
     <>
       <header className="mb-xl flex flex-col xl:flex-row xl:items-end justify-between gap-md border-b border-outline-variant pb-md">
-        <div>
+        <div className="min-w-0 flex-1 pr-4">
           {meeting ? (
             <>
               <div className="flex items-center gap-sm mb-xs">
                 <span className="material-symbols-outlined text-outline">calendar_month</span>
                 <span className="text-[15px] font-normal text-on-surface-variant">Meeting on {formatDate(meeting.meeting_date)}</span>
+                <button
+                  type="button"
+                  onClick={() => setTranscriptOpen(!transcriptOpen)}
+                  className="ml-auto sm:ml-4 px-3 py-1 bg-surface-container-highest rounded-full font-label-sm text-label-sm text-on-surface-variant hover:text-primary transition-colors"
+                >
+                  {transcriptOpen ? 'Hide' : 'View'} Transcript
+                </button>
               </div>
-              <h2 className="text-3xl font-bold text-on-surface">{meeting.title || 'Untitled Meeting'}</h2>
+              <h2 className="text-3xl font-bold text-on-surface break-words" title={meeting.title || 'Untitled Meeting'}>
+                {meeting.title || 'Untitled Meeting'}
+              </h2>
+              {transcriptOpen && (
+                <div className="mt-md p-md bg-surface-container-low rounded-lg border border-outline-variant max-h-[300px] overflow-y-auto">
+                  <pre className="font-body-sm text-body-sm text-on-surface whitespace-pre-wrap">
+                    {meeting.transcript}
+                  </pre>
+                </div>
+              )}
             </>
           ) : (
             <>
@@ -126,8 +148,20 @@ export default function TasksPage() {
           )}
         </div>
         
-        <div className="flex items-center gap-4">
+        <div className="flex flex-wrap items-center gap-4 shrink-0">
           <TaskFilters filters={filters} onChange={setFilters} />
+          <div className="flex items-center gap-2">
+            <span className="hidden sm:inline font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Role:</span>
+            <select
+              value={role}
+              onChange={(e) => setRole(e.target.value as 'pm' | 'owner')}
+              className="px-3 py-1 bg-surface-container-lowest border border-outline-variant rounded-full font-label-md text-label-md text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer appearance-none pr-8"
+              style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
+            >
+              <option value="pm">Project Manager</option>
+              <option value="owner">Task Owner</option>
+            </select>
+          </div>
           <button
             type="button"
             onClick={handleExport}
@@ -190,8 +224,8 @@ export default function TasksPage() {
           </div>
           <h2 className="font-display text-display text-on-surface mb-sm">No tasks found</h2>
           <p className="font-body-lg text-body-lg text-on-surface-variant max-w-md mx-auto mb-xl">
-            {selectedMeetingId
-              ? "This meeting didn't produce any actionable tasks. Relax, grab a coffee, or review the transcript for insights."
+            {hasActiveFilters
+              ? "No tasks match the current filters. Try adjusting your filters."
               : "No tasks found across your meetings. Create a meeting to extract tasks."}
           </p>
           <div className="flex flex-col sm:flex-row items-center gap-md opacity-50 cursor-not-allowed">
@@ -208,7 +242,7 @@ export default function TasksPage() {
       )}
 
       {!loading && !error && tasks && tasks.length > 0 && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-lg items-start">
           {tasks.map((task) => (
             <TaskCard key={task.id} task={task} onSave={handleSaveWithError} />
           ))}

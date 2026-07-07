@@ -1,5 +1,6 @@
-import type { TaskFilters as TaskFiltersType } from '../types'
-import { useViewRole } from '../context/ViewRoleContext'
+import { useEffect, useState } from 'react'
+import type { TaskFilters as TaskFiltersType, User } from '../types'
+import { listUsers } from '../api/users'
 
 interface TaskFiltersProps {
   filters: TaskFiltersType
@@ -7,7 +8,16 @@ interface TaskFiltersProps {
 }
 
 export default function TaskFilters({ filters, onChange }: TaskFiltersProps) {
-  const { role, setRole } = useViewRole()
+  const [users, setUsers] = useState<User[]>([])
+
+  useEffect(() => {
+    listUsers()
+      .then(setUsers)
+      .catch(() => {
+        // API unavailable — show empty dropdown (just "All")
+        setUsers([])
+      })
+  }, [])
 
   const update = (key: keyof TaskFiltersType, value: string) => {
     const updated = { ...filters }
@@ -32,10 +42,9 @@ export default function TaskFilters({ filters, onChange }: TaskFiltersProps) {
         style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
       >
         <option value="">Owner (All)</option>
-        <option value="Sarah">Sarah</option>
-        <option value="Mike">Mike</option>
-        <option value="Alex">Alex</option>
-        <option value="Emily">Emily</option>
+        {users.map((u) => (
+          <option key={u.id} value={u.name}>{u.name}</option>
+        ))}
       </select>
 
       <select
@@ -61,21 +70,6 @@ export default function TaskFilters({ filters, onChange }: TaskFiltersProps) {
         <option value="MEDIUM">Medium</option>
         <option value="HIGH">High</option>
       </select>
-      
-      {/* Role Toggle as part of filters row */}
-      <div className="ml-4 flex items-center gap-2 border-l border-outline-variant pl-4">
-        <span className="font-label-sm text-label-sm text-on-surface-variant uppercase tracking-wider">Role:</span>
-        <select
-          value={role}
-          onChange={(e) => setRole(e.target.value as 'pm' | 'owner')}
-          className="px-3 py-1 bg-surface-container-lowest border border-outline-variant rounded-full font-label-md text-label-md text-on-surface-variant focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary cursor-pointer appearance-none pr-8"
-          style={{ backgroundImage: 'url("data:image/svg+xml,%3csvg xmlns=%27http://www.w3.org/2000/svg%27 fill=%27none%27 viewBox=%270 0 20 20%27%3e%3cpath stroke=%27%236b7280%27 stroke-linecap=%27round%27 stroke-linejoin=%27round%27 stroke-width=%271.5%27 d=%27M6 8l4 4 4-4%27/%3e%3c/svg%3e")', backgroundPosition: 'right 0.5rem center', backgroundRepeat: 'no-repeat', backgroundSize: '1.5em 1.5em' }}
-        >
-          <option value="pm">Project Manager</option>
-          <option value="owner">Task Owner</option>
-        </select>
-      </div>
-
     </div>
   )
 }

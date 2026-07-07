@@ -33,7 +33,7 @@ export default function NewMeeting() {
       const result = await createMeeting({
         title: title.trim() || null,
         transcript: transcript.trim(),
-        meeting_date: meetingDate + 'T00:00:00',
+        meeting_date: meetingDate + 'T00:00:00Z',
       })
       setMeeting(result)
       onMeetingCreated()
@@ -148,7 +148,7 @@ export default function NewMeeting() {
       {meeting && (
         <section className="space-y-4">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-semibold text-ink">
+            <h2 className="font-display text-xl font-semibold text-on-surface truncate">
               {meeting.title || 'Extracted Tasks'}
             </h2>
             <button

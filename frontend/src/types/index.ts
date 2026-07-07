@@ -42,7 +42,7 @@ export interface Meeting {
 export interface User {
   id: string
   name: string
-  email: string
+  email: string | null
   role: UserRole
 }
 
@@ -61,7 +61,6 @@ export interface TaskUpdate {
   due_date?: string | null
   priority?: Priority | null
   status?: TaskStatus | null
-  confirmed?: boolean | null
 }
 
 /* ── Query params ── */

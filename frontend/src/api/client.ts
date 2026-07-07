@@ -23,7 +23,18 @@ async function handleResponse<T>(response: Response): Promise<T> {
     try {
       const body = await response.json()
       if (body?.detail) {
-        detail = body.detail
+        if (typeof body.detail === 'string') {
+          const lowerDetail = body.detail.toLowerCase()
+          if (lowerDetail.includes('sqlalchemy') || lowerDetail.includes('asyncpg') || lowerDetail.includes('integrityerror') || lowerDetail.includes('traceback')) {
+            detail = 'An unexpected error occurred on the server. Please check your inputs and try again.'
+          } else {
+            detail = body.detail
+          }
+        } else if (Array.isArray(body.detail)) {
+          detail = body.detail.map((err: any) => `${err.loc?.slice(-1)[0] || 'Field'}: ${err.msg}`).join(', ')
+        } else {
+          detail = String(body.detail)
+        }
       }
       raw_output = body?.raw_output
     } catch {

@@ -16,7 +16,7 @@ class TaskCreate(BaseModel):
     due_date: datetime | None = None
     priority: Priority = Priority.MEDIUM
     evidence_quote: str | None = None
-    meeting_id: uuid.UUID
+    meeting_id: uuid.UUID | None = None
 
 
 class TaskUpdate(BaseModel):
