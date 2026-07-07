@@ -1,4 +1,5 @@
 const BASE_URL = import.meta.env.VITE_API_BASE_URL ?? 'http://localhost:8000/api/v1'
+const REQUEST_TIMEOUT = 30_000
 
 export class ApiClientError extends Error {
   status: number
@@ -16,7 +17,7 @@ export class ApiClientError extends Error {
 
 async function handleResponse<T>(response: Response): Promise<T> {
   if (!response.ok) {
-    let detail = `Request failed with status ${response.status}`
+    let detail = 'Request failed'
     let raw_output: string | undefined | null
 
     try {
@@ -50,15 +51,26 @@ function buildQuery(params?: Record<string, string | undefined>): string {
   return '?' + new URLSearchParams(entries as [string, string][]).toString()
 }
 
+async function fetchWithTimeout(input: RequestInfo, init?: RequestInit): Promise<Response> {
+  const controller = new AbortController()
+  const id = setTimeout(() => controller.abort(), REQUEST_TIMEOUT)
+  try {
+    const response = await fetch(input, { ...init, signal: controller.signal })
+    return response
+  } finally {
+    clearTimeout(id)
+  }
+}
+
 export async function get<T>(path: string, params?: Record<string, string | undefined>): Promise<T> {
   const url = `${BASE_URL}${path}${buildQuery(params)}`
-  const response = await fetch(url)
+  const response = await fetchWithTimeout(url)
   return handleResponse<T>(response)
 }
 
 export async function post<T>(path: string, body: unknown): Promise<T> {
   const url = `${BASE_URL}${path}`
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -68,7 +80,7 @@ export async function post<T>(path: string, body: unknown): Promise<T> {
 
 export async function patch<T>(path: string, body: unknown): Promise<T> {
   const url = `${BASE_URL}${path}`
-  const response = await fetch(url, {
+  const response = await fetchWithTimeout(url, {
     method: 'PATCH',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body),
@@ -78,9 +90,9 @@ export async function patch<T>(path: string, body: unknown): Promise<T> {
 
 export async function getBlob(path: string, params?: Record<string, string | undefined>): Promise<Blob> {
   const url = `${BASE_URL}${path}${buildQuery(params)}`
-  const response = await fetch(url)
+  const response = await fetchWithTimeout(url)
   if (!response.ok) {
-    await handleResponse(response)
+    return handleResponse(response)
   }
   return response.blob()
 }

@@ -1,8 +1,8 @@
 /* ── Enums ── */
 
-export type Priority = 'low' | 'medium' | 'high' | 'critical'
+export type Priority = 'LOW' | 'MEDIUM' | 'HIGH'
 
-export type TaskStatus = 'todo' | 'in_progress' | 'done' | 'blocked'
+export type TaskStatus = 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED'
 
 export type UserRole = 'admin' | 'manager' | 'member'
 
@@ -21,6 +21,13 @@ export interface Task {
   evidence_quote: string | null
   created_at: string
   updated_at: string
+}
+
+export interface MeetingSummary {
+  id: string
+  title: string
+  meeting_date: string
+  created_at: string
 }
 
 export interface Meeting {
@@ -60,6 +67,7 @@ export interface TaskUpdate {
 /* ── Query params ── */
 
 export interface TaskFilters {
+  meeting_id?: string
   owner?: string
   status?: string
   priority?: string
