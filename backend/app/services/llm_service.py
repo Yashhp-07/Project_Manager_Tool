@@ -1,16 +1,18 @@
-"""LLM extraction service — calls Gemini to extract tasks from transcripts."""
+"""LLM extraction service — calls the configured provider to extract tasks from transcripts."""
 
 import json
 import re
 from datetime import datetime, timezone
 
-from google.genai import Client
-
-from app.core.config import settings
 from app.core.constants import Priority
 from app.core.exceptions import LLMExtractionException
+from app.core.logger import logger
+from app.providers.openai_compatible import LLMProvider
 from app.schemas.llm_extraction import LLMExtractionResult
 from app.utils.prompts import build_extraction_prompt
+
+# Module-level singleton — reuses the underlying httpx connection pool.
+_llm_provider = LLMProvider()
 
 
 def _strip_markdown_fences(text: str) -> str:
@@ -33,6 +35,7 @@ def _parse_date(date_str: str | None) -> datetime | None:
             tzinfo=timezone.utc,
         )
     except (ValueError, IndexError):
+        logger.warning("Malformed date from LLM, defaulting to null: %r", date_str)
         return None
 
 
@@ -45,7 +48,11 @@ _PRIORITY_MAP: dict[str, Priority] = {
 
 def _map_priority(raw: str) -> Priority:
     """Map LLM priority string to internal Priority enum (case-insensitive)."""
-    return _PRIORITY_MAP.get(raw.lower(), Priority.MEDIUM)
+    mapped = _PRIORITY_MAP.get(raw.lower())
+    if mapped is None:
+        logger.warning("Unrecognized priority from LLM, defaulting to Medium: %r", raw)
+        return Priority.MEDIUM
+    return mapped
 
 
 def _map_to_task_dicts(result: LLMExtractionResult) -> list[dict]:
@@ -67,11 +74,11 @@ class LLMService:
 
     async def extract_tasks(
         self, transcript: str, meeting_date: datetime,
-    ) -> list[dict]:
-        """Extract tasks from a transcript via Gemini.
+    ) -> tuple[str, list[dict]]:
+        """Extract tasks from a transcript via the configured LLM provider.
 
-        Returns a list of dicts matching the TaskCreate schema shape
-        (description, owners, due_date, priority, evidence_quote).
+        Returns a tuple of (generated_meeting_title, list_of_task_dicts).
+        The list of dicts matches the TaskCreate schema shape.
 
         Raises:
             LLMExtractionException: If the response cannot be parsed or validated.
@@ -80,19 +87,7 @@ class LLMService:
             transcript, meeting_date.strftime("%Y-%m-%d"),
         )
 
-        client = Client(api_key=settings.gemini_api_key)
-
-        try:
-            response = await client.aio.models.generate_content(
-                model="gemini-3.5-flash",
-                contents=prompt,
-            )
-        except Exception as exc:
-            raise LLMExtractionException(
-                f"Gemini API call failed: {exc}",
-            ) from exc
-
-        raw_text = response.text
+        raw_text = await _llm_provider.generate(prompt)
 
         cleaned = _strip_markdown_fences(raw_text)
 
@@ -112,4 +107,4 @@ class LLMService:
                 raw_output=raw_text,
             ) from exc
 
-        return _map_to_task_dicts(validated)
+        return validated.meeting_title, _map_to_task_dicts(validated)

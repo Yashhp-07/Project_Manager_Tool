@@ -3,12 +3,10 @@
 import uuid
 from datetime import datetime, timezone
 
-from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.exceptions import NotFoundException, ValidationException
-from app.models.meeting import Meeting
-from app.models.task import Task
+from app.core.exceptions import DatabaseException, NotFoundException, ValidationException
+from app.core.logger import logger
 from app.repositories.meeting_repository import MeetingRepository
 from app.repositories.task_repository import TaskRepository
 from app.schemas.task import TaskResponse, TaskUpdate
@@ -38,10 +36,11 @@ class TaskService:
             raise NotFoundException("Task", str(task_id))
 
         if update_data.due_date is not None:
-            result = await self.db.execute(
-                select(Meeting.meeting_date).where(Meeting.id == task.meeting_id),
+            meeting_date = await self.meeting_repository.get_meeting_date(
+                self.db, task.meeting_id,
             )
-            meeting_date = result.scalar_one()
+            if meeting_date is None:
+                raise NotFoundException("Meeting", str(task.meeting_id))
             self.validate_due_date(update_data.due_date, meeting_date)
 
         update_dict = update_data.model_dump(exclude_unset=True)
@@ -52,9 +51,10 @@ class TaskService:
 
         try:
             await self.db.commit()
-        except Exception:
+        except Exception as exc:
             await self.db.rollback()
-            raise
+            logger.error("Failed to save task %s: %s", task_id, exc)
+            raise DatabaseException("Failed to save task") from exc
 
         return TaskResponse.model_validate(task)
 

@@ -18,6 +18,17 @@ class MeetingCreate(BaseModel):
     meeting_date: datetime
 
 
+class MeetingSummaryResponse(BaseModel):
+    """Lightweight schema for meeting list views (no nested tasks)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    title: str
+    meeting_date: datetime
+    created_at: datetime
+
+
 class MeetingResponse(BaseModel):
     """Schema for meeting responses returned to clients."""
 
