@@ -41,6 +41,7 @@ class MeetingService:
 
         validated_tasks: list[TaskCreate] = []
         for raw in raw_tasks:
+            raw["meeting_id"] = meeting.id
             validated = TaskCreate.model_validate(raw)
             TaskService.validate_due_date(validated.due_date, data.meeting_date)
             validated_tasks.append(validated)

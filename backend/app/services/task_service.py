@@ -1,7 +1,7 @@
 """Business logic for Task operations."""
 
 import uuid
-from datetime import datetime
+from datetime import datetime, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -63,7 +63,13 @@ class TaskService:
         due_date: datetime | None, meeting_date: datetime,
     ) -> None:
         """Ensure a task's due date is not before the related meeting date."""
-        if due_date is not None and due_date < meeting_date:
+        if due_date is None:
+            return
+
+        dd = due_date.replace(tzinfo=timezone.utc) if due_date.tzinfo is None else due_date
+        md = meeting_date.replace(tzinfo=timezone.utc) if meeting_date.tzinfo is None else meeting_date
+
+        if dd < md:
             raise ValidationException(
                 f"Due date ({due_date.isoformat()}) cannot be "
                 f"before meeting date ({meeting_date.isoformat()})",
