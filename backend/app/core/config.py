@@ -17,7 +17,13 @@ class Settings(BaseSettings):
     )
 
     database_url: str = ""
-    gemini_api_key: str = ""
+
+    cors_origins: list[str] = ["http://localhost:5173"]
+
+    # LLM — single provider (OpenAI-compatible)
+    api_key: str = ""
+    llm_base_url: str = "https://api.openai.com/v1"
+    llm_model: str = "gpt-4o"
 
 
 settings = Settings()

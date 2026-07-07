@@ -28,7 +28,7 @@ class Task(Base):
     )
     due_date = Column(DateTime(timezone=True), nullable=True)
     priority = Column(Enum(Priority), default=Priority.MEDIUM, nullable=False)
-    status = Column(Enum(TaskStatus), default=TaskStatus.TODO, nullable=False)
+    status = Column(Enum(TaskStatus), default=TaskStatus.NOT_STARTED, nullable=False)
     confirmed = Column(Boolean, default=False, nullable=False)
     evidence_quote = Column(Text, nullable=True)
     created_at = Column(

@@ -9,6 +9,7 @@ from starlette.requests import Request
 from starlette.responses import JSONResponse
 
 from app.api.v1 import router as api_v1_router
+from app.core.config import settings
 from app.core.exceptions import (
     DatabaseException,
     LLMExtractionException,
@@ -35,7 +36,7 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=settings.cors_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -65,10 +66,9 @@ async def llm_extraction_handler(
     request: Request, exc: LLMExtractionException,
 ) -> JSONResponse:
     """Convert LLMExtractionException to a 502 response."""
-    content: dict[str, str | None] = {"detail": str(exc)}
-    if exc.raw_output is not None:
-        content["raw_output"] = exc.raw_output
-    return JSONResponse(status_code=502, content=content)
+    # Do not leak exc.raw_output to the client.
+    logger.error("LLM Extraction failed: %s | Raw output: %s", exc, getattr(exc, 'raw_output', 'N/A'))
+    return JSONResponse(status_code=502, content={"detail": str(exc)})
 
 
 @app.exception_handler(DatabaseException)
@@ -77,6 +77,18 @@ async def database_handler(
 ) -> JSONResponse:
     """Convert DatabaseException to a 500 response."""
     return JSONResponse(status_code=500, content={"detail": str(exc)})
+
+
+@app.exception_handler(Exception)
+async def unhandled_handler(
+    request: Request, exc: Exception,
+) -> JSONResponse:
+    """Catch-all for any unhandled exception — logs and returns a safe 500."""
+    logger.exception("Unhandled exception: %s", exc)
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"},
+    )
 
 
 @app.get("/health")

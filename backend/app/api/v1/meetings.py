@@ -2,13 +2,22 @@
 
 import uuid
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Query
 
 from app.api.dependencies import get_meeting_service
-from app.schemas.meeting import MeetingCreate, MeetingResponse
+from app.schemas.meeting import MeetingCreate, MeetingResponse, MeetingSummaryResponse
 from app.services.meeting_service import MeetingService
 
 router = APIRouter(prefix="/meetings", tags=["meetings"])
+
+
+@router.get("", response_model=list[MeetingSummaryResponse])
+async def list_meetings(
+    search: str | None = Query(None, description="Case-insensitive title search"),
+    service: MeetingService = Depends(get_meeting_service),
+) -> list[MeetingSummaryResponse]:
+    """List all meetings (lightweight, no nested tasks)."""
+    return await service.list_meetings(search)
 
 
 @router.post(

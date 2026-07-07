@@ -8,6 +8,7 @@ from fastapi import APIRouter, Depends, Query
 from starlette.responses import Response
 
 from app.api.dependencies import get_task_service
+from app.core.logger import logger
 from app.schemas.task import TaskResponse, TaskUpdate
 from app.services.task_service import TaskService
 
@@ -16,6 +17,7 @@ router = APIRouter(prefix="/tasks", tags=["tasks"])
 
 @router.get("", response_model=list[TaskResponse])
 async def list_tasks(
+    meeting_id: uuid.UUID | None = Query(None, description="Filter by meeting id"),
     owner: str | None = Query(None, description="Filter by owner name"),
     status: str | None = Query(None, description="Filter by task status"),
     priority: str | None = Query(None, description="Filter by priority level"),
@@ -23,6 +25,8 @@ async def list_tasks(
 ) -> list[TaskResponse]:
     """List tasks with optional AND-combined filters."""
     filters: dict[str, str] = {}
+    if meeting_id is not None:
+        filters["meeting_id"] = str(meeting_id)
     if owner is not None:
         filters["owner"] = owner
     if status is not None:
@@ -45,6 +49,7 @@ async def update_task(
 
 @router.get("/export")
 async def export_tasks_csv(
+    meeting_id: uuid.UUID | None = Query(None, description="Filter by meeting id"),
     owner: str | None = Query(None, description="Filter by owner name"),
     status: str | None = Query(None, description="Filter by task status"),
     priority: str | None = Query(None, description="Filter by priority level"),
@@ -52,6 +57,8 @@ async def export_tasks_csv(
 ) -> Response:
     """Export tasks matching filters as a CSV file."""
     filters: dict[str, str] = {}
+    if meeting_id is not None:
+        filters["meeting_id"] = str(meeting_id)
     if owner is not None:
         filters["owner"] = owner
     if status is not None:
@@ -59,7 +66,11 @@ async def export_tasks_csv(
     if priority is not None:
         filters["priority"] = priority
 
-    tasks = await service.list_tasks(filters or None)
+    try:
+        tasks = await service.list_tasks(filters or None)
+    except Exception as exc:
+        logger.error("Failed to fetch tasks for CSV export: %s", exc)
+        raise
 
     buf = io.StringIO()
     writer = csv.writer(buf)

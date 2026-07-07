@@ -17,7 +17,7 @@ def setup_logging() -> None:
         stream=sys.stdout,
     )
 
-    if settings.gemini_api_key:
+    if settings.api_key:
         logging.getLogger("httpx").setLevel(logging.WARNING)
 
 

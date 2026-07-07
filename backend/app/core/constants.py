@@ -6,19 +6,17 @@ from enum import Enum
 class Priority(str, Enum):
     """Task priority levels."""
 
-    LOW = "low"
-    MEDIUM = "medium"
-    HIGH = "high"
-    CRITICAL = "critical"
+    LOW = "LOW"
+    MEDIUM = "MEDIUM"
+    HIGH = "HIGH"
 
 
 class TaskStatus(str, Enum):
     """Task lifecycle states."""
 
-    TODO = "todo"
-    IN_PROGRESS = "in_progress"
-    DONE = "done"
-    BLOCKED = "blocked"
+    NOT_STARTED = "NOT_STARTED"
+    IN_PROGRESS = "IN_PROGRESS"
+    COMPLETED = "COMPLETED"
 
 
 class UserRole(str, Enum):
@@ -33,7 +31,6 @@ PRIORITY_ORDER: dict[Priority, int] = {
     Priority.LOW: 1,
     Priority.MEDIUM: 2,
     Priority.HIGH: 3,
-    Priority.CRITICAL: 4,
 }
 
 DEFAULT_PAGE_SIZE: int = 20
