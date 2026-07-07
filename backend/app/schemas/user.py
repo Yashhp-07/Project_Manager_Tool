@@ -2,8 +2,7 @@
 
 import uuid
 
-from pydantic import ConfigDict
-from pydantic.main import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from app.core.constants import UserRole
 
